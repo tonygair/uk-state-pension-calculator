@@ -1,0 +1,20 @@
+--  state_pension_gui.gpr
+--  ============================================================================
+--  Gnoga front-end project file.
+--
+--  Expects a built Gnoga 2.2 source tree at ../gnoga/ (see gui/README.md).
+--  ============================================================================
+
+with "gnoga/src/gnoga.gpr";
+with "gnoga/settings.gpr";
+
+project State_Pension_Gui is
+   for Source_Dirs use ("src/");
+   for Object_Dir  use "obj/";
+   for Exec_Dir    use "exe/";
+   for Main use ("state_pension_gui.adb");
+   for Create_Missing_Dirs use "True";
+   package Compiler renames Settings.Compiler;
+   package Binder   renames Settings.Binder;
+   package Linker   renames Settings.Linker;
+end State_Pension_Gui;

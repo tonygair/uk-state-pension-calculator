@@ -1,0 +1,47 @@
+{
+  "project_name": "State_Pension",
+  "project_summary": "UK new State Pension qualifying-years calculator in formally-verified SPARK 2014. Models post-2016 new State Pension only (Pensions Act 2014). Three data sources (DWP / HMRC / Citizen) with distinct typed Subject_Id per source; explicit cross-source reconciliation; five-case Decide procedure with case-by-case postcondition. Chapter 2 of The Dark Factory's civic software series.",
+  "components": [
+    {"name": "State_Pension", "purpose": "Decide State Pension entitlement from DWP/HMRC/Citizen records and current statutory weekly rate"}
+  ],
+  "functional_requirements": [
+    "FR-1: Three distinct typed Subject_Id types (DWP_Subject_Id, HMRC_Subject_Id, Citizen_Subject_Id) — each `new Natural`. Compiler must refuse to silently confuse them.",
+    "FR-2: Day_Number type is `range 0 .. 100_000` (days from 1901-01-01, matching Ada.Calendar.Year_Number lower bound). Date_Of_Birth_Day subtype is Day_Number `range 19_088 .. 47_117` (6 April 1953 — first new-State-Pension cohort — through 1 January 2030).",
+    "FR-3: Records_Agree is an expression function returning Boolean. It checks DWP.Date_Of_Birth = HMRC.Date_Of_Birth and HMRC.Date_Of_Birth = Citizen.Date_Of_Birth, and Natural(DWP.Subject) = Natural(HMRC.Subject) and Natural(HMRC.Subject) = Natural(Citizen.Subject). The Natural casts drop type-distinction ONLY here.",
+    "FR-4: State_Pension_Start_Day(DoB) returns Day_Number with postcondition `Result > DoB and Result - DoB in 21_915 .. 25_567`. Body implements three statutory brackets: DoB <= 21_644 -> +24_107 (age 66); 21_644 < DoB <= 27_854 -> +24_472 (age 67); else -> +24_837 (age 68).",
+    "FR-5: Decision_Reason is an enum with exactly five values in order: Records_Disagree, Pre_State_Pension_Age, Below_Qualifying_Threshold, Pro_Rata_Entitlement, Full_Entitlement.",
+    "FR-6: Decide procedure: in DWP_Record, in HMRC_Record, in Citizen_Record, in Query_Context, out Weekly_Rate, out Annual_Total, out Decision_Reason. Postcondition enumerates ALL FIVE cases, mutually exclusive. Pro-rata weekly = Full_New_Weekly_Rate * Qualifying_Count / 35. Full weekly = Full_New_Weekly_Rate. Annual = Weekly * 52 always. Zero weekly/annual for the three non-entitled cases.",
+    "FR-7: When Records_Agree is false, Reason = Records_Disagree, Weekly = 0, Annual = 0 (no entitlement ever issued under source disagreement).",
+    "FR-8: Statutory thresholds Qualifying_Year_Threshold = 10 and Full_Year_Threshold = 35 as named constants of subtype Qualifying_Years (Integer range 0..80)."
+  ],
+  "acceptance_criteria": [
+    "Body compiles cleanly under gprbuild -gnatc",
+    "All Decide postcondition obligations discharged by gnatprove --level=2 --mode=all",
+    "No integer overflow in any arithmetic on the bounded types",
+    "No body re-declares the Records_Agree expression function or State_Pension_Start_Day function — body provides only the IMPLEMENTATION, not the declaration"
+  ],
+  "constraints": [
+    "SPARK_Mode => On on BOTH package spec AND package body (aspect does NOT inherit)",
+    "Integer arithmetic only — no floating point",
+    "All monetary amounts in pence",
+    "No `with Interfaces;` needed (pure integer arithmetic, no bit ops)"
+  ],
+  "non_functional_requirements": ["Identifiers from the spec are copied character-for-character into the body — no renaming, abbreviation, or pluralisation"],
+  "quality_gates": {
+    "acceptance_criteria_behavioral": true
+  },
+  "stakeholders": ["The Dark Factory Ltd"],
+  "target_users": ["UK government — civilian-procurement-reform demonstrator (Roadmap pillar 5)"],
+  "tech_stack": ["Ada 2012", "SPARK 2014"],
+  "out_of_scope": [
+    "Pre-2016 basic State Pension + SERPS/S2P",
+    "Protected payments for 1951-1995 transitional cohort",
+    "Deferred-pension increments",
+    "Triple-lock projection (rate is a query parameter)",
+    "Pension Credit, Savings Credit",
+    "Overseas residence rules"
+  ],
+  "milestones": [],
+  "timeline": "Chapter 2 of civic software series",
+  "budget": "free under Apache-2.0"
+}

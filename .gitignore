@@ -1,0 +1,5 @@
+obj-state-pension/
+*.o
+*.ali
+*.exe
+state_pension_demo

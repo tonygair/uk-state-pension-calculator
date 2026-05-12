@@ -1,0 +1,107 @@
+{
+  "package": "State_Pension",
+  "with_clauses": ["State_Pension"],
+  "use_clauses": ["State_Pension"],
+  "cases": [
+    {
+      "name": "records_disagree_dob_mismatch",
+      "procedure": "Decide",
+      "decls": [
+        "DWP_R  : DWP_Record     := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "HMRC_R : HMRC_Record    := (Subject => 12345, Date_Of_Birth => 20_000, Qualifying_Count => 35)",
+        "Citi_R : Citizen_Record := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "Ctx    : Query_Context  := (As_Of_Date => 47_117, Full_New_Weekly_Rate => 23_025)",
+        "Wkl    : Weekly_Rate",
+        "Ann    : Annual_Total",
+        "Rsn    : Decision_Reason"
+      ],
+      "call": "Decide (DWP_R, HMRC_R, Citi_R, Ctx, Wkl, Ann, Rsn)",
+      "checks": [
+        "Rsn = Records_Disagree",
+        "Wkl = 0",
+        "Ann = 0"
+      ],
+      "comment": "DWP says DoB=19_088 (6 Apr 1953), HMRC says 20_000 — sources disagree → no entitlement"
+    },
+    {
+      "name": "pre_state_pension_age",
+      "procedure": "Decide",
+      "decls": [
+        "DWP_R  : DWP_Record     := (Subject => 12345, Date_Of_Birth => 40_000)",
+        "HMRC_R : HMRC_Record    := (Subject => 12345, Date_Of_Birth => 40_000, Qualifying_Count => 35)",
+        "Citi_R : Citizen_Record := (Subject => 12345, Date_Of_Birth => 40_000)",
+        "Ctx    : Query_Context  := (As_Of_Date => 47_117, Full_New_Weekly_Rate => 23_025)",
+        "Wkl    : Weekly_Rate",
+        "Ann    : Annual_Total",
+        "Rsn    : Decision_Reason"
+      ],
+      "call": "Decide (DWP_R, HMRC_R, Citi_R, Ctx, Wkl, Ann, Rsn)",
+      "checks": [
+        "Rsn = Pre_State_Pension_Age",
+        "Wkl = 0",
+        "Ann = 0"
+      ],
+      "comment": "DoB=40_000 ≈ year 2010; SP start = 40_000 + 24_837 = 64_837; As_Of=47_117 is well before — claimant too young"
+    },
+    {
+      "name": "below_qualifying_threshold",
+      "procedure": "Decide",
+      "decls": [
+        "DWP_R  : DWP_Record     := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "HMRC_R : HMRC_Record    := (Subject => 12345, Date_Of_Birth => 19_088, Qualifying_Count => 9)",
+        "Citi_R : Citizen_Record := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "Ctx    : Query_Context  := (As_Of_Date => 47_117, Full_New_Weekly_Rate => 23_025)",
+        "Wkl    : Weekly_Rate",
+        "Ann    : Annual_Total",
+        "Rsn    : Decision_Reason"
+      ],
+      "call": "Decide (DWP_R, HMRC_R, Citi_R, Ctx, Wkl, Ann, Rsn)",
+      "checks": [
+        "Rsn = Below_Qualifying_Threshold",
+        "Wkl = 0",
+        "Ann = 0"
+      ],
+      "comment": "Past SP age, but only 9 qualifying years (< 10 statutory minimum) → no entitlement"
+    },
+    {
+      "name": "pro_rata_entitlement_20_of_35",
+      "procedure": "Decide",
+      "decls": [
+        "DWP_R  : DWP_Record     := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "HMRC_R : HMRC_Record    := (Subject => 12345, Date_Of_Birth => 19_088, Qualifying_Count => 20)",
+        "Citi_R : Citizen_Record := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "Ctx    : Query_Context  := (As_Of_Date => 47_117, Full_New_Weekly_Rate => 23_025)",
+        "Wkl    : Weekly_Rate",
+        "Ann    : Annual_Total",
+        "Rsn    : Decision_Reason"
+      ],
+      "call": "Decide (DWP_R, HMRC_R, Citi_R, Ctx, Wkl, Ann, Rsn)",
+      "checks": [
+        "Rsn = Pro_Rata_Entitlement",
+        "Wkl = 13_157",
+        "Ann = 684_164"
+      ],
+      "comment": "20 of 35 years; weekly = 23_025 * 20 / 35 = 13_157 pence (£131.57/week); annual = 13_157 * 52 = 684_164 pence"
+    },
+    {
+      "name": "full_entitlement_35_years",
+      "procedure": "Decide",
+      "decls": [
+        "DWP_R  : DWP_Record     := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "HMRC_R : HMRC_Record    := (Subject => 12345, Date_Of_Birth => 19_088, Qualifying_Count => 35)",
+        "Citi_R : Citizen_Record := (Subject => 12345, Date_Of_Birth => 19_088)",
+        "Ctx    : Query_Context  := (As_Of_Date => 47_117, Full_New_Weekly_Rate => 23_025)",
+        "Wkl    : Weekly_Rate",
+        "Ann    : Annual_Total",
+        "Rsn    : Decision_Reason"
+      ],
+      "call": "Decide (DWP_R, HMRC_R, Citi_R, Ctx, Wkl, Ann, Rsn)",
+      "checks": [
+        "Rsn = Full_Entitlement",
+        "Wkl = 23_025",
+        "Ann = 1_197_300"
+      ],
+      "comment": "35 qualifying years = full new State Pension; weekly = 23_025 pence (£230.25 — actual 2025-26 rate); annual = 23_025 * 52 = 1_197_300 pence (£11,973)"
+    }
+  ]
+}

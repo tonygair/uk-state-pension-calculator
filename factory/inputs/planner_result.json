@@ -1,0 +1,58 @@
+{
+  "directory_structure": ["src/"],
+  "files": [
+    {
+      "path": "src/state_pension.ads",
+      "purpose": "Specification — declares three typed Subject_Id types, Day_Number with Date_Of_Birth_Day subtype, Pence/Weekly/Annual subtypes, Qualifying_Years subtype with two statutory threshold constants, three source records, Query_Context, Records_Agree expression function, State_Pension_Start_Day function with postcondition, Decision_Reason enum, Decide procedure with case-by-case postcondition. SPARK_Mode => On on the package declaration.",
+      "depends_on": [],
+      "interfaces": [
+        "package State_Pension with SPARK_Mode => On is",
+        "  type DWP_Subject_Id is new Natural;",
+        "  type HMRC_Subject_Id is new Natural;",
+        "  type Citizen_Subject_Id is new Natural;",
+        "  type Day_Number is range 0 .. 100_000;  -- days from 1901-01-01",
+        "  subtype Date_Of_Birth_Day is Day_Number range 19_088 .. 47_117;",
+        "  subtype Pence_Amount is Integer range 0 .. 10_000_000;",
+        "  subtype Weekly_Rate is Pence_Amount range 0 .. 100_000;",
+        "  subtype Annual_Total is Pence_Amount range 0 .. 5_200_000;",
+        "  subtype Qualifying_Years is Integer range 0 .. 80;",
+        "  Qualifying_Year_Threshold : constant Qualifying_Years := 10;",
+        "  Full_Year_Threshold       : constant Qualifying_Years := 35;",
+        "  type DWP_Record is record Subject : DWP_Subject_Id; Date_Of_Birth : Date_Of_Birth_Day; end record;",
+        "  type HMRC_Record is record Subject : HMRC_Subject_Id; Date_Of_Birth : Date_Of_Birth_Day; Qualifying_Count : Qualifying_Years; end record;",
+        "  type Citizen_Record is record Subject : Citizen_Subject_Id; Date_Of_Birth : Date_Of_Birth_Day; end record;",
+        "  type Query_Context is record As_Of_Date : Day_Number; Full_New_Weekly_Rate : Weekly_Rate; end record;",
+        "  function Records_Agree (DWP : DWP_Record; HMRC : HMRC_Record; Citizen : Citizen_Record) return Boolean is (DWP.Date_Of_Birth = HMRC.Date_Of_Birth and then HMRC.Date_Of_Birth = Citizen.Date_Of_Birth and then Natural(DWP.Subject) = Natural(HMRC.Subject) and then Natural(HMRC.Subject) = Natural(Citizen.Subject));",
+        "  function State_Pension_Start_Day (DoB : Date_Of_Birth_Day) return Day_Number with Post => State_Pension_Start_Day'Result > DoB and then State_Pension_Start_Day'Result - Day_Number(DoB) in 21_915 .. 25_567;",
+        "  type Decision_Reason is (Records_Disagree, Pre_State_Pension_Age, Below_Qualifying_Threshold, Pro_Rata_Entitlement, Full_Entitlement);",
+        "  procedure Decide (DWP : in DWP_Record; HMRC : in HMRC_Record; Citizen : in Citizen_Record; Context : in Query_Context; Weekly_Amount : out Weekly_Rate; Annual_Amount : out Annual_Total; Reason : out Decision_Reason) with Post => (if Reason = Records_Disagree then Weekly_Amount = 0 and Annual_Amount = 0 and not Records_Agree(DWP,HMRC,Citizen)) and then (if Reason = Pre_State_Pension_Age then Weekly_Amount = 0 and Annual_Amount = 0 and Records_Agree(DWP,HMRC,Citizen) and Context.As_Of_Date < State_Pension_Start_Day(DWP.Date_Of_Birth)) and then (if Reason = Below_Qualifying_Threshold then Weekly_Amount = 0 and Annual_Amount = 0 and Records_Agree(DWP,HMRC,Citizen) and Context.As_Of_Date >= State_Pension_Start_Day(DWP.Date_Of_Birth) and HMRC.Qualifying_Count < Qualifying_Year_Threshold) and then (if Reason = Pro_Rata_Entitlement then Records_Agree(DWP,HMRC,Citizen) and Context.As_Of_Date >= State_Pension_Start_Day(DWP.Date_Of_Birth) and HMRC.Qualifying_Count >= Qualifying_Year_Threshold and HMRC.Qualifying_Count < Full_Year_Threshold and Weekly_Amount = Context.Full_New_Weekly_Rate * HMRC.Qualifying_Count / Full_Year_Threshold) and then (if Reason = Full_Entitlement then Records_Agree(DWP,HMRC,Citizen) and Context.As_Of_Date >= State_Pension_Start_Day(DWP.Date_Of_Birth) and HMRC.Qualifying_Count >= Full_Year_Threshold and Weekly_Amount = Context.Full_New_Weekly_Rate) and then Annual_Amount = Weekly_Amount * 52;",
+        "end State_Pension;"
+      ],
+      "traces_to": ["FR-1", "FR-2", "FR-3", "FR-4", "FR-5", "FR-6", "FR-7", "FR-8"]
+    },
+    {
+      "path": "src/state_pension.adb",
+      "purpose": "Body. Implements State_Pension_Start_Day using three statutory brackets (DoB <= 21_644 -> +24_107; <= 27_854 -> +24_472; else +24_837) and Decide as a sequential five-case eliminator setting Reason explicitly per branch before amounts. Package body declared with SPARK_Mode => On (aspect does NOT inherit). MUST NOT re-declare Records_Agree (it's a complete expression function in the spec). MUST NOT re-declare State_Pension_Start_Day with the postcondition — provide only the function body.",
+      "depends_on": ["src/state_pension.ads"],
+      "interfaces": [
+        "package body State_Pension with SPARK_Mode => On is",
+        "  -- DO NOT redeclare Records_Agree (it's an expression function in the spec)",
+        "  -- DO NOT redeclare State_Pension_Start_Day's signature with postcondition — provide ONLY 'function State_Pension_Start_Day (DoB : Date_Of_Birth_Day) return Day_Number is begin ... end State_Pension_Start_Day;'",
+        "  function State_Pension_Start_Day (DoB : Date_Of_Birth_Day) return Day_Number is begin if DoB <= 21_644 then return DoB + 24_107; elsif DoB <= 27_854 then return DoB + 24_472; else return DoB + 24_837; end if; end State_Pension_Start_Day;",
+        "  procedure Decide (...) is begin",
+        "    if not Records_Agree (DWP, HMRC, Citizen) then Weekly_Amount := 0; Annual_Amount := 0; Reason := Records_Disagree; return; end if;",
+        "    if Context.As_Of_Date < State_Pension_Start_Day (DWP.Date_Of_Birth) then Weekly_Amount := 0; Annual_Amount := 0; Reason := Pre_State_Pension_Age; return; end if;",
+        "    if HMRC.Qualifying_Count < Qualifying_Year_Threshold then Weekly_Amount := 0; Annual_Amount := 0; Reason := Below_Qualifying_Threshold; return; end if;",
+        "    if HMRC.Qualifying_Count >= Full_Year_Threshold then Weekly_Amount := Context.Full_New_Weekly_Rate; Annual_Amount := Weekly_Amount * 52; Reason := Full_Entitlement;",
+        "    else Weekly_Amount := Context.Full_New_Weekly_Rate * HMRC.Qualifying_Count / Full_Year_Threshold; Annual_Amount := Weekly_Amount * 52; Reason := Pro_Rata_Entitlement; end if;",
+        "  end Decide;",
+        "end State_Pension;"
+      ],
+      "traces_to": ["FR-4", "FR-5", "FR-6", "FR-7"]
+    }
+  ],
+  "subsystems": [{"name": "State_Pension", "files": ["src/state_pension.ads", "src/state_pension.adb"]}],
+  "attack_surfaces": [],
+  "build_steps": ["gprbuild -P state_pension.gpr -gnatc"],
+  "test_strategy": "gnatprove --level=2 --mode=all -u state_pension.adb against the case-by-case Decide postcondition. Expect 8/8 obligations discharged."
+}

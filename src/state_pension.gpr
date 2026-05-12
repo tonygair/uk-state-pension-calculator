@@ -1,0 +1,28 @@
+--  state_pension.gpr
+--  ============================================================================
+--  GNAT project file — UK State Pension qualifying-years calculator.
+--  ============================================================================
+
+project State_Pension is
+
+   for Languages     use ("Ada");
+   for Source_Dirs   use (".");
+   for Object_Dir    use "obj-state-pension";
+   for Exec_Dir      use ".";
+   for Main          use ("state_pension_demo.adb");
+
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-gnat2022",
+         "-gnatwa",       --  All warnings
+         "-gnatVa",       --  All validity checks
+         "-gnata",        --  Enable assertions
+         "-O0",
+         "-g");
+   end Compiler;
+
+   package Builder is
+      for Default_Switches ("Ada") use ("-m");
+   end Builder;
+
+end State_Pension;
